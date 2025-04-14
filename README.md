@@ -43,6 +43,9 @@ cd esp32-pump-controller
 #define MY_SSID "YOUR_WIFI_SSID"
 #define MY_PASSWORD "YOUR_WIFI_PASSWORD"
 #define MQTT_BROKER_IP "YOUR_MQTT_BROKER_IP"
+#define MQTT_USER "Your_MQTT_User"
+#define MQTT_PASSWORD "Your_MQTT_Password"
+#define MQTT_ID "Your_MQTT_Client_ID"
 ```
 
 3. Install dependencies (`platformio.ini`):
@@ -131,7 +134,7 @@ This project is licensed under **GNU GPLv3** - see [LICENSE](LICENSE) for detail
 ```cpp
 /*
  * ESP32 Pump Controller
- * Copyright (C) 2023 Matteo Formigli
+ * Copyright (C) 2025 Matteo Formigli
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

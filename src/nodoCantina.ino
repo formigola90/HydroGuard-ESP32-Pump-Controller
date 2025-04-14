@@ -1,7 +1,6 @@
-
 /*
  * ESP32 Pump Controller
- * Copyright (C) 2023 Your Name
+ * Copyright (C) 2025 Matteo Formigli
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,15 +13,14 @@
 #include <esp_task_wdt.h>
 #include "localWiFiConfig.h"
 #include <Adafruit_ADS1X15.h>
-#include "esp_task_wdt.h"
 
 
 // DEFINES
 // debug
-#define DEBUG 4 // 0-highest, 1-high, 2-medium, 3-low
+#define DEBUG 4 // 0 (Silent) to 4 (Verbose)
 #ifdef DEBUG
-  #define dsPrint(s, level) if(level>DEBUG)Serial.print(s)
-  #define dsPrintln(s, level) if(level>DEBUG)Serial.println(s)
+  #define dsPrint(s, level) if(level<DEBUG)Serial.print(s)
+  #define dsPrintln(s, level) if(level<DEBUG)Serial.println(s)
 #else
   #define dsPrint(s, level)
   #define dsPrintln(s, level)
@@ -105,7 +103,7 @@ struct YFG1 {
   bool new_data;
 	const uint8_t PIN;
 	volatile uint32_t pulseNumber;
-  float conversionCoeficient; // pulseNumber -> Q
+  float conversionCoefficient; // pulseNumber -> Q
 	float Q; //[L/m]
 	float V; //[L]
 };
@@ -117,7 +115,7 @@ struct YD6080 {
   bool new_data;
 	const uint8_t ADC_CHANNEL;
 	float analogRead;
-	float conversionCoeficient; //[]
+	float conversionCoefficient; //[]
 	float pressure; //[Bar]
 };
 // distance sensor
@@ -176,7 +174,7 @@ long measureAJSR04M(uint8_t trigPin, uint8_t echoPin){
   long old_duration_mean = 0;
   int valid_measurements = livello_cisterna.read_repetitions;
   for(int i=0; i<(livello_cisterna.read_repetitions); i++){
-    vTaskDelay(pdMS_TO_TICKS(1000)); //wait 1/2 sec
+    vTaskDelay(pdMS_TO_TICKS(1000)); //wait at least 1/2 sec
     triggerAJSR04M(trigPin);
     duration = pulseIn(echoPin, HIGH);
     dsPrint("AJSR04M measured echo delay ", 1);
@@ -229,7 +227,7 @@ void sensorsReadTask(void * parameter) {
     if ((read_time - flow_meter.previous_read_time)>flow_meter.read_period){
       flow_meter.new_data = 1;
       dsPrintln("Measuring flowrate.", 1);
-      flow_meter.Q = flow_meter.pulseNumber * flow_meter.conversionCoeficient; // [L/min]
+      flow_meter.Q = flow_meter.pulseNumber * flow_meter.conversionCoefficient; // [L/min]
       flow_meter.pulseNumber = 0; // esetting flowmwter pulse counter
       flow_meter.V = flow_meter.V + flow_meter.Q/60/1000 * (read_time - flow_meter.previous_read_time); // volume calculation
       flow_meter.previous_read_time = read_time;
@@ -243,7 +241,7 @@ void sensorsReadTask(void * parameter) {
       pressure_sensor.analogRead = adc.computeVolts(adc.readADC_SingleEnded(pressure_sensor.ADC_CHANNEL));
       dsPrint("Analog read: ", 1);
       dsPrintln(pressure_sensor.analogRead, 1);
-      pressure_sensor.pressure = pressure_sensor.analogRead * pressure_sensor.conversionCoeficient;
+      pressure_sensor.pressure = pressure_sensor.analogRead * pressure_sensor.conversionCoefficient;
       dsPrint("Pressure: ", 1);
       dsPrintln(pressure_sensor.pressure, 1);
     }
@@ -343,14 +341,14 @@ void callback(char* topic, byte* message, unsigned int length) {
       dsPrintln("INVALID DATA ERROR", 3);
     }
   }
-      // conversionCoeficient
-  else if (String(topic) == "PumpController/flow_meter/conversionCoeficient/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/flow_meter/conversionCoeficient/mqtt_input: ", 3);
+      // conversionCoefficient
+  else if (String(topic) == "PumpController/flow_meter/conversionCoefficient/mqtt_input") {
+    dsPrint("MQTT input received on PumpController/flow_meter/conversionCoefficient/mqtt_input: ", 3);
     float_data = atof(char_messageTemp);
     if(float_data>0){
       dsPrint(float_data, 3);
       dsPrintln(" [Bar/1]", 3);
-      flow_meter.conversionCoeficient = float_data;
+      flow_meter.conversionCoefficient = float_data;
       flow_meter.new_data = 1;
     }
     else {
@@ -373,14 +371,14 @@ void callback(char* topic, byte* message, unsigned int length) {
     }
   }
       // pressure
-  // conversionCoeficient
-  else if (String(topic) == "PumpController/pressure_sensor/conversionCoeficient/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/pressure_sensor/conversionCoeficient/mqtt_input: ", 3);
+  // conversionCoefficient
+  else if (String(topic) == "PumpController/pressure_sensor/conversionCoefficient/mqtt_input") {
+    dsPrint("MQTT input received on PumpController/pressure_sensor/conversionCoefficient/mqtt_input: ", 3);
     float_data = atof(char_messageTemp);
     if(float_data>0){
       dsPrint(float_data, 3);
       dsPrintln(" [Bar/1]", 3);
-      pressure_sensor.conversionCoeficient = float_data;
+      pressure_sensor.conversionCoefficient = float_data;
       pressure_sensor.new_data = 1;
     }
     else {
@@ -538,7 +536,7 @@ void reconnect() {
   while (!client.connected()) {
     dsPrint("Attempting MQTT connection...", 2);
     // Attempt to connect
-    if (client.connect("PumpControllerClient", "fortis10", "bocko")) {
+    if (client.connect(MQTT_ID, MQTT_USER, MQTT_PASSWORD)) {
       dsPrint("connected", 2);
       // TOPIC SUBSCRIPTIONS
     // flow_meter
@@ -547,14 +545,14 @@ void reconnect() {
       // flow rate
       // flowed volume
       client.subscribe("PumpController/flow_meter/V/mqtt_input");
-      // conversionCoeficient
-      client.subscribe("PumpController/flow_meter/conversionCoeficient/mqtt_input");
+      // conversionCoefficient
+      client.subscribe("PumpController/flow_meter/conversionCoefficient/mqtt_input");
     // pressure_sensor
       // read_period
       client.subscribe("PumpController/pressure_sensor/read_period/mqtt_input");
       // pressure
-      // conversionCoeficient
-      client.subscribe("PumpController/pressure_sensor/conversionCoeficient/mqtt_input");
+      // conversionCoefficient
+      client.subscribe("PumpController/pressure_sensor/conversionCoefficient/mqtt_input");
     // water level mesurment
       // read_period
       client.subscribe("Cisterna/livello_cisterna/read_period/mqtt_input");
@@ -649,11 +647,11 @@ void MqttTask(void * parameter) {
       dsPrint("PumpController/flow_meter/V: ", 2);
       dsPrintln(dataString, 2);
       client.publish("PumpController/flow_meter/V", dataString);
-      // conversionCoeficient
-      dtostrf(flow_meter.conversionCoeficient, 1, 2, dataString);
-      dsPrint("PumpController/flow_meter/conversionCoeficient: ", 2);
+      // conversionCoefficient
+      dtostrf(flow_meter.conversionCoefficient, 1, 2, dataString);
+      dsPrint("PumpController/flow_meter/conversionCoefficient: ", 2);
       dsPrintln(dataString, 2);
-      client.publish("PumpController/flow_meter/conversionCoeficient", dataString);
+      client.publish("PumpController/flow_meter/conversionCoefficient", dataString);
     }
     // pressure mesurments
     if(pressure_sensor.new_data){
@@ -668,11 +666,11 @@ void MqttTask(void * parameter) {
       dsPrint("PumpController/pressure_sensor/pressure: ", 2);
       dsPrintln(dataString, 2);
       client.publish("PumpController/pressure_sensor/pressure", dataString);
-      // conversionCoeficient
-      dtostrf(pressure_sensor.conversionCoeficient, 1, 2, dataString);
-      dsPrint("PumpController/pressure_sensor/conversionCoeficient: ", 2);
+      // conversionCoefficient
+      dtostrf(pressure_sensor.conversionCoefficient, 1, 2, dataString);
+      dsPrint("PumpController/pressure_sensor/conversionCoefficient: ", 2);
       dsPrintln(dataString, 2);
-      client.publish("PumpController/pressure_sensor/conversionCoeficient", dataString);
+      client.publish("PumpController/pressure_sensor/conversionCoefficient", dataString);
     }
     // water level mesurment
     if(livello_cisterna.new_data){

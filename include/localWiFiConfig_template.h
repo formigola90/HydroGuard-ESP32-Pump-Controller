@@ -15,6 +15,9 @@
 #define WIFI_PASSWORD "Your_Password"
 
 // Mqtt broker credentials
-#define MQTT_BROKER_IP "ip_addres_of_your_mqtt_broker"
+#define MQTT_BROKER_IP "Your_MQTT_Broker_IP"
+#define MQTT_USER "Your_MQTT_User"
+#define MQTT_PASSWORD "Your_MQTT_Password"
+#define MQTT_ID "Your_MQTT_Client_ID"
 
 #endif
