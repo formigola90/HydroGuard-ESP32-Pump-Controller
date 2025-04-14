@@ -1,3 +1,13 @@
+
+/*
+ * ESP32 Pump Controller
+ * Copyright (C) 2023 Your Name
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License...
+ */
+
 // IMPORTS
 #include <WiFi.h>
 #include <PubSubClient.h>
@@ -44,10 +54,13 @@
 #define FLOOD_DETECTOR_SIGNAL_PIN 36
 
 #ifndef MY_SSID
-  #define MY_SSID "your_ssid"
+  #define MY_SSID "set_this_in_localWiFiConfig.h"
 #endif
 #ifndef MY_PASSWORD
-  #define MY_PASSWORD "your_password"
+  #define MY_PASSWORD "set_this_in_localWiFiConfig.h"
+#endif
+#ifndef MQTT_BROKER_IP
+  #define MQTT_BROKER_IP "set_this_in_localWiFiConfig.h"
 #endif
 
 
@@ -58,7 +71,7 @@ const char* wifipassword = MY_PASSWORD;
 WiFiClient wifi;
 
 // MQTT
-const char* mqtt_server = "192.168.1.159";
+const char* mqtt_server = MQTT_BROKER_IP;
 PubSubClient client(wifi);
 
 // FREERTOS
