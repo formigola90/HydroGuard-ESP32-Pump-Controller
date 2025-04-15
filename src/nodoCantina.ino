@@ -414,8 +414,8 @@ void callback(char* topic, byte* message, unsigned int length) {
     }
   }
   // read_repetitions
-  else if (String(topic) == TOPIC_WaterLevel_readRepetions "/mqtt_input") {
-    dsPrint("MQTT input received on " TOPIC_WaterLevel_readRepetions "/mqtt_input: ", DEBUGLevel_Mqtt_WaterLevel);
+  else if (String(topic) == TOPIC_WaterLevel_readRepetitions "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_WaterLevel_readRepetitions "/mqtt_input: ", DEBUGLevel_Mqtt_WaterLevel);
     int_data = messageTemp.toInt();
     if(int_data>0){
       dsPrint(int_data, DEBUGLevel_Mqtt_WaterLevel);
@@ -423,7 +423,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       livello_cisterna.read_repetitions = int_data;
     }
     else {
-      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_WaterLevel_readRepetions "/mqtt_input", DEBUGLevel_Mqtt_Error);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_WaterLevel_readRepetitions "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
   // distance
@@ -444,8 +444,8 @@ void callback(char* topic, byte* message, unsigned int length) {
   }
       // analog read
   // treshold
-  else if (String(topic) == TOPIC_FloodSensor_treshold "/mqtt_input") {
-    dsPrint("MQTT input received on " TOPIC_FloodSensor_treshold "/mqtt_input: ", DEBUGLevel_Mqtt_FloodSensor);
+  else if (String(topic) == TOPIC_FloodSensor_threshold "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_FloodSensor_threshold "/mqtt_input: ", DEBUGLevel_Mqtt_FloodSensor);
     int_data = messageTemp.toInt();
     if(int_data>MIN_SENSOR_READ_PERIOD){
       dsPrint(int_data, DEBUGLevel_Mqtt_FloodSensor);
@@ -453,7 +453,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       flood_detector.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_FloodSensor_treshold "/mqtt_input", DEBUGLevel_Mqtt_Error);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_FloodSensor_threshold "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
     // pump_state_machine
@@ -570,14 +570,14 @@ void reconnect() {
       // read_period
       client.subscribe(TOPIC_WaterLevel_readPeriod"/mqtt_input");
       // read_repetitions
-      client.subscribe(TOPIC_WaterLevel_readRepetions "/mqtt_input");
+      client.subscribe(TOPIC_WaterLevel_readRepetitions "/mqtt_input");
       // distance
     // flood_detector
       // read_period
       client.subscribe(TOPIC_FloodSensor_readPeriod "/mqtt_input");
       // analog read
       // treshold
-      client.subscribe(TOPIC_FloodSensor_treshold "/mqtt_input");
+      client.subscribe(TOPIC_FloodSensor_threshold "/mqtt_input");
     // pump state machine
       // current_state;
       // new_state;
@@ -695,9 +695,9 @@ void MqttTask(void * parameter) {
       client.publish(TOPIC_WaterLevel_readPeriod, dataString);
       // read_repetitions
       String(livello_cisterna.read_repetitions).toCharArray(dataString, 8);
-      dsPrint(TOPIC_WaterLevel_readRepetions ": ", DEBUGLevel_Mqtt_WaterLevel);
+      dsPrint(TOPIC_WaterLevel_readRepetitions ": ", DEBUGLevel_Mqtt_WaterLevel);
       dsPrintln(dataString, DEBUGLevel_Mqtt_WaterLevel);
-      client.publish(TOPIC_WaterLevel_readRepetions, dataString);
+      client.publish(TOPIC_WaterLevel_readRepetitions, dataString);
       // distance
       xSemaphoreTake( xMutex, portMAX_DELAY );
       dtostrf(livello_cisterna.distance, 1, 2, dataString);
@@ -721,9 +721,9 @@ void MqttTask(void * parameter) {
       client.publish(TOPIC_FloodSensor_analogRead, dataString);
       // treshold
       dtostrf(flood_detector.treshold, 1, 2, dataString);
-      dsPrint(TOPIC_FloodSensor_treshold ": ", DEBUGLevel_Mqtt_FloodSensor);
+      dsPrint(TOPIC_FloodSensor_threshold ": ", DEBUGLevel_Mqtt_FloodSensor);
       dsPrintln(dataString, DEBUGLevel_Mqtt_FloodSensor);
-      client.publish(TOPIC_FloodSensor_treshold, dataString);
+      client.publish(TOPIC_FloodSensor_threshold, dataString);
     }
     // pump_state_machine
     if(pump_state_machine.new_data){
