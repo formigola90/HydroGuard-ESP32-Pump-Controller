@@ -37,7 +37,7 @@
 #define TOPIC_PressureSensor_pressure "PumpController/pressure_sensor/pressure"
 
 #define TOPIC_WaterLevel_readPeriod "Cisterna/livello_cisterna/read_period"
-#define TOPIC_WaterLevel_readRepetions "Cisterna/livello_cisterna/read_repetitions"
+#define TOPIC_WaterLevel_readRepetitions "Cisterna/livello_cisterna/read_repetitions"
 #define TOPIC_WaterLevel_distance "Cisterna/livello_cisterna/distance"
 
 #define TOPIC_FloodSensor_readPeriod "PumpController/flood_detector/read_period"
