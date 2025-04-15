@@ -41,7 +41,7 @@
 #define TOPIC_WaterLevel_distance "Cisterna/livello_cisterna/distance"
 
 #define TOPIC_FloodSensor_readPeriod "PumpController/flood_detector/read_period"
-#define TOPIC_FloodSensor_treshold "PumpController/flood_detector/treshold"
+#define TOPIC_FloodSensor_threshold "PumpController/flood_detector/threshold"
 #define TOPIC_FloodSensor_analogRead "PumpController/flood_detector/analog_read"
 
 #define TOPIC_StateMachine_currentState "PumpController/pump_state_machine/current_state"
