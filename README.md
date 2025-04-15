@@ -66,10 +66,41 @@ pio run --target upload && pio device monitor
 ```
 
 ## Configuration
-### Debug Levels (src/main.cpp)
+
+### Debug Levels (src/nodoCantina.ino)
+
+The system includes a global debug level and component-specific debug levels to control the verbosity of debug messages. This allows for precise control over which types of debug messages are displayed.
+
+#### Global Debug Level:
 ```cpp
-#define DEBUG 4 // 0 (Silent) to 4 (Verbose)
+#define DEBUG 1 // 0 (Silent) to 4 (Verbose)
 ```
+
+#### Component-Specific Debug Levels:
+```cpp
+#define DEBUGLevel_Mqtt_Generic 3
+#define DEBUGLevel_Mqtt_Error 0
+#define DEBUGLevel_Mqtt_FlowMeter 3
+#define DEBUGLevel_Mqtt_PressureSensor 3
+#define DEBUGLevel_Mqtt_WaterLevel 3
+#define DEBUGLevel_Mqtt_FloodSensor 3
+#define DEBUGLevel_Mqtt_StateMachine 3
+```
+
+#### Explanation:
+- The `DEBUG` constant sets the overall verbosity level for the system.
+- Component-specific constants (e.g., `DEBUGLevel_Mqtt_Generic`) determine the minimum priority of messages for each grouping (e.g., MQTT topics, flow meter, pressure sensor).
+- Messages with a priority below the component's debug level will be displayed.
+
+#### Example Usage:
+- To log messages for a specific component:
+  ```cpp
+  dsPrintln("MQTT connection error!", DEBUGLevel_Mqtt_Error);
+  dsPrint("Flow meter data published", DEBUGLevel_Mqtt_FlowMeter);
+  ```
+
+By adjusting these constants, you can focus on the debug information most relevant to your needs while silencing less critical messages.
+
 
 ### Sensor Parameters
 | Parameter               | Default | Range       |
@@ -79,53 +110,166 @@ pio run --target upload && pio device monitor
 | Switch-Off Pressure     | 3.0 Bar | 0-inf Bar   |
 | Flood Detection Threshold | 800   | 0-4095      |
 
-## MQTT Integration
-### Published Topics
-| Topic                                      | Format | Description              |
-|-------------------------------------------|--------|--------------------------|
-| PumpController/flow_meter/Q               | float  | Flow rate (L/min)        |
-| PumpController/pressure_sensor/pressure   | float  | Pressure (Bar)           |
-| Cisterna/livello_cisterna/distance        | float  | Water level (cm)         |
-| PumpController/pump_state_machine/state   | int    | Current pump state       |
+### MQTT Integration
 
-### Subscribed Topics
-| Topic                                      | Format | Description              |
-|-------------------------------------------|--------|--------------------------|
-| PumpController/pump_state_machine/pump_on | 0/1    | Manual pump control      |
-| PumpController/+/mqtt_input               | varies | Parameter configuration  |
+The system uses MQTT for communication, allowing real-time data publishing and parameter configuration. The topics are organized to manage different sensors, the pump state machine, and general MQTT status.
 
-## State Machine
-**States**:
-- `STATE_0`: Pump Off (Idle)
-- `STATE_1`: Pump Active
-- `STATE_2`: Safety Lockout
+#### MQTT Topics
 
-**Transitions**:
-1. Normal Operation:
-   - OFF → ON when pressure < switch_on_pressure
-   - ON → OFF when pressure > switch_off_pressure
-2. Safety Conditions:
-   - ANY → STATE_2 on flood detection
-   - STATE 1 → STATE_2 after reaching max_run_time
-   - STATE_2 → STATE_0 when user resets the safety block via mqtt
+**Published Topics**
+| Topic                                      | Format  | Description                          |
+|-------------------------------------------|---------|--------------------------------------|
+| `PumpController/flow_meter/Q`             | `float` | Flow rate (L/min)                   |
+| `PumpController/flow_meter/V`             | `float` | Total volume flowed (L)             |
+| `PumpController/flow_meter/conversionCoefficient` | `float` | Conversion coefficient for flow sensor |
+| `PumpController/flow_meter/read_period`   | `int`   | Sensor read interval (ms)           |
+| `PumpController/pressure_sensor/pressure` | `float` | Pressure (Bar)                      |
+| `PumpController/pressure_sensor/conversionCoefficient` | `float` | Conversion coefficient for pressure sensor |
+| `PumpController/pressure_sensor/read_period` | `int`  | Sensor read interval (ms)           |
+| `Cisterna/livello_cisterna/distance`      | `float` | Water level distance (cm)           |
+| `Cisterna/livello_cisterna/read_period`   | `int`   | Sensor read interval (ms)           |
+| `Cisterna/livello_cisterna/read_repetitions` | `int` | Number of repetitions for averaging |
+| `PumpController/flood_detector/analog_read` | `int`  | Analog reading from flood detector  |
+| `PumpController/flood_detector/treshold`  | `int`   | Flood detection threshold           |
+| `PumpController/flood_detector/read_period` | `int`  | Sensor read interval (ms)           |
+| `PumpController/pump_state_machine/current_state` | `int` | Current pump state                  |
+| `PumpController/pump_state_machine/pump_on` | `int`   | Pump activation (1 = ON, 0 = OFF)   |
+| `PumpController/pump_state_machine/safety_block` | `int` | Safety block (1 = Active, 0 = Inactive) |
+| `PumpController/pump_state_machine/max_run_time` | `float` | Maximum runtime (ms)                |
+| `PumpController/pump_state_machine/switch_on_pressure` | `float` | Pressure to switch pump ON (Bar)    |
+| `PumpController/pump_state_machine/switch_off_pressure` | `float` | Pressure to switch pump OFF (Bar)   |
+| `PumpController/mqttState`                | `int`   | MQTT watchdog state                 |
 
-## Troubleshooting
-**Common Issues**:
-1. **MQTT Connection Failures**
-   - Verify broker IP in `localWiFiConfig.h`
-   - Monitor serial output (DEBUG >= 2)
+**Subscribed Topics**
+| Topic                                      | Format  | Description                          |
+|-------------------------------------------|---------|--------------------------------------|
+| `PumpController/flow_meter/read_period/mqtt_input` | `int` | Update flow meter read period       |
+| `PumpController/flow_meter/V/mqtt_input`  | `float` | Update total flowed volume          |
+| `PumpController/flow_meter/conversionCoefficient/mqtt_input` | `float` | Update flow meter conversion coefficient |
+| `PumpController/pressure_sensor/read_period/mqtt_input` | `int` | Update pressure sensor read period  |
+| `PumpController/pressure_sensor/conversionCoefficient/mqtt_input` | `float` | Update pressure sensor conversion coefficient |
+| `Cisterna/livello_cisterna/read_period/mqtt_input` | `int` | Update water level read period      |
+| `Cisterna/livello_cisterna/read_repetitions/mqtt_input` | `int` | Update number of averaging repetitions |
+| `PumpController/flood_detector/read_period/mqtt_input` | `int` | Update flood detector read period   |
+| `PumpController/flood_detector/treshold/mqtt_input` | `int` | Update flood detection threshold    |
+| `PumpController/pump_state_machine/pump_on/mqtt_input` | `int` | Manually turn the pump ON or OFF    |
+| `PumpController/pump_state_machine/safety_block/mqtt_input` | `int` | Activate or deactivate safety block |
+| `PumpController/pump_state_machine/max_run_time/mqtt_input` | `int` | Update maximum runtime              |
+| `PumpController/pump_state_machine/switch_on_pressure/mqtt_input` | `float` | Update ON pressure threshold        |
+| `PumpController/pump_state_machine/switch_off_pressure/mqtt_input` | `float` | Update OFF pressure threshold       |
+| `PumpController/mqttState/mqtt_input`     | `int`   | Update MQTT watchdog state          |
 
-2. **Sensor Reading Errors**
+#### Key Highlights:
+- **Dynamic Configuration:** The subscribed topics allow runtime updates for sensor parameters, pump settings, and thresholds.
+- **Debug Levels:** Each topic grouping is associated with specific debug levels, enabling fine-grained monitoring and troubleshooting.
+- **Safety Features:** Topics such as `safety_block` and `max_run_time` ensure system safety by preventing overuse or failure scenarios.
+
+#### Example Usage:
+To update the flow meter's read period via MQTT:
+1. Publish the desired value to `PumpController/flow_meter/read_period/mqtt_input`.
    ```bash
-   # Enable verbose logging
-   #define DEBUG 4
-   pio device monitor
+   mosquitto_pub -h <broker_ip> -t "PumpController/flow_meter/read_period/mqtt_input" -m "5000"
    ```
+2. The system will verify and apply the new value if valid.
 
-3. **Pump Not Responding**
-   - Check safety_block status via MQTT
-   - Verify relay wiring (GPIO16)
-   - Monitor pressure sensor readings
+### State Machine
+
+The pump controller uses a state machine to manage its operation based on sensor data, safety conditions, and MQTT commands. The state machine ensures safe and efficient control of the pump while allowing for remote configuration and monitoring.
+
+#### States
+- **`STATE_0`**: Pump Off (Idle)
+- **`STATE_1`**: Pump Active
+- **`STATE_2`**: Safety Lockout
+
+#### Transitions
+1. **Normal Operation**:
+   - `STATE_0` → `STATE_1`: When the pump is turned on (`pump_on = 1`) and pressure drops below `switch_on_pressure`.
+   - `STATE_1` → `STATE_0`: When pressure exceeds `switch_off_pressure` or the pump is turned off (`pump_on = 0`).
+2. **Safety Conditions**:
+   - Any State → `STATE_2`: Triggered when safety conditions are met (e.g., flood detection or exceeding `max_run_time`).
+   - `STATE_2` → `STATE_0`: Safety block is cleared via MQTT (`safety_block = 0`).
+
+#### Parameters
+The following parameters are used to control the state machine:
+| Parameter             | Description                          | Default Value |
+|-----------------------|--------------------------------------|---------------|
+| `pump_on`            | Manual control to turn the pump ON/OFF (1/0). | `0`           |
+| `safety_block`       | Indicates if the safety block is active (1/0). | `0`           |
+| `max_run_time`       | Maximum allowed runtime for the pump (ms). | `600,000` ms (10 min) |
+| `switch_on_pressure` | Pressure threshold to switch the pump ON (Bar). | `1.5` Bar     |
+| `switch_off_pressure`| Pressure threshold to switch the pump OFF (Bar). | `3.0` Bar     |
+
+#### MQTT Commands
+The state machine can be controlled and monitored via MQTT:
+- **Subscribed Topics**:
+  - `PumpController/pump_state_machine/pump_on/mqtt_input`: Set `pump_on` (1 = ON, 0 = OFF).
+  - `PumpController/pump_state_machine/safety_block/mqtt_input`: Reset safety block (1 = Active, 0 = Cleared).
+  - `PumpController/pump_state_machine/max_run_time/mqtt_input`: Update maximum runtime.
+  - `PumpController/pump_state_machine/switch_on_pressure/mqtt_input`: Update the ON pressure threshold.
+  - `PumpController/pump_state_machine/switch_off_pressure/mqtt_input`: Update the OFF pressure threshold.
+- **Published Topics**:
+  - `PumpController/pump_state_machine/current_state`: Current state of the pump.
+  - `PumpController/pump_state_machine/pump_on`: Current `pump_on` state.
+  - `PumpController/pump_state_machine/safety_block`: Current safety block status.
+  - `PumpController/pump_state_machine/max_run_time`: Current maximum runtime configuration.
+  - `PumpController/pump_state_machine/switch_on_pressure`: Current ON pressure threshold.
+  - `PumpController/pump_state_machine/switch_off_pressure`: Current OFF pressure threshold.
+
+### Troubleshooting
+
+This section provides solutions to common issues encountered while using the HydroGuard ESP32 Pump Controller.
+
+#### 1. **MQTT Connection Failures**
+- **Problem**: The controller fails to connect to the MQTT broker.
+  - **Solution**:
+    1. Verify the MQTT broker IP, username, and password in `localWiFiConfig.h`.
+    2. Check the network connection and ensure the MQTT broker is reachable from the ESP32.
+    3. Use the debug logging system to identify issues:
+       - Set the global debug level to at least `2` in `src/main.cpp`:
+         ```cpp
+         #define DEBUG 2
+         ```
+       - Monitor the serial output to identify errors during the connection process.
+
+#### 2. **Sensor Reading Errors**
+- **Problem**: Sensor data is incorrect or not being updated.
+  - **Solution**:
+    1. Check the wiring and connections for all sensors.
+    2. Validate sensor parameters via MQTT topics (e.g., read period, conversion coefficients).
+    3. Use verbose debug logging for detailed insights:
+       ```cpp
+       #define DEBUG 4
+       ```
+       Run the following command to monitor the serial output:
+       ```bash
+       pio device monitor
+       ```
+
+#### 3. **Pump Not Responding**
+- **Problem**: The pump does not turn on or off as expected.
+  - **Solution**:
+    1. Check the state of the `safety_block` via the MQTT topic `PumpController/pump_state_machine/safety_block`.
+    2. Verify the relay wiring to the ESP32's `GPIO16` pin.
+    3. Ensure the pressure sensor's readings are within the configured thresholds (`switch_on_pressure` and `switch_off_pressure`).
+
+#### 4. **Flood Detection Issues**
+- **Problem**: Flood detection is triggering incorrectly or not triggering at all.
+  - **Solution**:
+    1. Verify the flood detector's wiring and ensure the power pin (`GPIO23`) is correctly connected.
+    2. Adjust the flood detection threshold via the MQTT topic `PumpController/flood_detector/treshold/mqtt_input`.
+
+#### 5. **Debugging Tips**
+- Use the component-specific debug levels to isolate issues (e.g., `DEBUGLevel_Mqtt_Generic`, `DEBUGLevel_Mqtt_Error`).
+- Example: To debug MQTT issues, increase the `DEBUGLevel_Mqtt_Generic` to `3` or higher in `src/main.cpp`:
+  ```cpp
+  #define DEBUGLevel_Mqtt_Generic 3
+  ```
+
+#### 6. **Watchdog Timer Resets**
+- **Problem**: The ESP32 appears to reset unexpectedly.
+  - **Solution**:
+    1. Check the MQTT watchdog state (`PumpController/mqttState`).
+    2. Ensure the MQTT task is running without delays exceeding the configured watchdog timeout (`WDT_TIMEOUT`).
 
 ## License
 This project is licensed under **GNU GPLv3** - see [LICENSE](LICENSE) for details.
