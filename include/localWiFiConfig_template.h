@@ -26,4 +26,12 @@
 #define MQTT_PASSWORD "Your_MQTT_Password"
 #define MQTT_ID "Your_MQTT_Client_ID"
 
+// MQTT topics
+#define TOPIC_FlowMeter_conversionCoefficient "PumpController/flow_meter/conversionCoefficient"
+#define TOPIC_FlowMeter_readPeriod "PumpController/flow_meter/read_period"
+#define TOPIC_FlowMeter_V "PumpController/flow_meter/V"
+
+#define TOPIC_PressureSensor_readPeriod "PumpController/pressure_sensor/read_period"
+#define TOPIC_PressureSensor_conversionCoefficient "PumpController/pressure_sensor/conversionCoefficient"
+
 #endif
