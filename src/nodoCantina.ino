@@ -23,7 +23,7 @@
 
 // DEFINES
 // debug
-#define DEBUG 4 // 0 (Silent) to 4 (Verbose)
+#define DEBUG 1 // 0 (Silent) to 4 (Verbose)
 #ifdef DEBUG
   #define dsPrint(s, level) if(level<DEBUG)Serial.print(s)
   #define dsPrintln(s, level) if(level<DEBUG)Serial.println(s)
@@ -31,6 +31,13 @@
   #define dsPrint(s, level)
   #define dsPrintln(s, level)
 #endif
+#define DEBUGLevel_Mqtt_Generic 3
+#define DEBUGLevel_Mqtt_Error 0
+#define DEBUGLevel_Mqtt_FlowMeter 3
+#define DEBUGLevel_Mqtt_PressureSensor 3
+#define DEBUGLevel_Mqtt_WaterLevel 3
+#define DEBUGLevel_Mqtt_FloodSensor 3
+#define DEBUGLevel_Mqtt_StateMachine 3
 // constants
 #define SOUND_SPEED 0.034
 // wtd
@@ -299,240 +306,240 @@ void sensorsReadTask(void * parameter) {
 }
 
 void callback(char* topic, byte* message, unsigned int length) {
-  dsPrint("Message arrived on topic: ", 4);
-  dsPrint(topic, 4);
-  dsPrint(". Message: ", 4);
+  dsPrint("Message arrived on topic: ", DEBUGLevel_Mqtt_Generic);
+  dsPrint(topic, DEBUGLevel_Mqtt_Generic);
+  dsPrint(". Message: ", DEBUGLevel_Mqtt_Generic);
   String messageTemp;
   char char_messageTemp[length];
   int int_data;
   float float_data;
   
   for (int i = 0; i < length; i++) {
-    dsPrint((char)message[i], 4);
+    dsPrint((char)message[i], DEBUGLevel_Mqtt_Generic);
     char_messageTemp[i] = (char)message[i];
     messageTemp += (char)message[i];
   }
-  dsPrintln("", 4);
+  dsPrintln("", DEBUGLevel_Mqtt_Generic);
 
 
   // MQTT MESSAGE DECODING
 // flow_meter
   // read_period
-  if (String(topic) == "PumpController/flow_meter/read_period/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/flow_meter/read_period/mqtt_input: ", 3);
+  if (String(topic) == TOPIC_FlowMeter_readPeriod "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_FlowMeter_readPeriod "/mqtt_input: ", DEBUGLevel_Mqtt_FlowMeter);
     int_data = messageTemp.toInt();
     if(int_data>MIN_SENSOR_READ_PERIOD){
-      dsPrint(int_data, 3);
-      dsPrintln(" [ms]", 3);
+      dsPrint(int_data, DEBUGLevel_Mqtt_FlowMeter);
+      dsPrintln(" [ms]", DEBUGLevel_Mqtt_FlowMeter);
       flow_meter.read_period = int_data;
       flow_meter.new_data = 1;
     }
     else {
-      dsPrint(int_data, 3);
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrint(int_data, DEBUGLevel_Mqtt_Error);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_FlowMeter_readPeriod "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
       // flow rate
       // V
-  else if (String(topic) == "PumpController/flow_meter/V/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/flow_meter/V/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_FlowMeter_V "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_FlowMeter_V "/mqtt_input: ", DEBUGLevel_Mqtt_FlowMeter);
     float_data = atof(char_messageTemp);
     if(float_data>=0){
-      dsPrint(float_data, 3);
-      dsPrintln(" [Bar/1]", 3);
+      dsPrint(float_data, DEBUGLevel_Mqtt_FlowMeter);
+      dsPrintln(" [Bar/1]", DEBUGLevel_Mqtt_FlowMeter);
       flow_meter.V = float_data;
       flow_meter.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_FlowMeter_V "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
       // conversionCoefficient
-  else if (String(topic) == "PumpController/flow_meter/conversionCoefficient/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/flow_meter/conversionCoefficient/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_FlowMeter_conversionCoefficient "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_FlowMeter_conversionCoefficient "/mqtt_input: ", DEBUGLevel_Mqtt_FlowMeter);
     float_data = atof(char_messageTemp);
     if(float_data>0){
-      dsPrint(float_data, 3);
-      dsPrintln(" [Bar/1]", 3);
+      dsPrint(float_data, DEBUGLevel_Mqtt_FlowMeter);
+      dsPrintln(" [Bar/1]", DEBUGLevel_Mqtt_FlowMeter);
       flow_meter.conversionCoefficient = float_data;
       flow_meter.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_FlowMeter_conversionCoefficient "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
 // pressure_sensor
   // read_period
-  else if (String(topic) == "PumpController/pressure_sensor/read_period/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/pressure_sensor/read_period/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_PressureSensor_readPeriod "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_PressureSensor_readPeriod "/mqtt_input: ", DEBUGLevel_Mqtt_PressureSensor);
     int_data = messageTemp.toInt();
     if(int_data>MIN_SENSOR_READ_PERIOD){
-      dsPrint(int_data, 3);
-      dsPrintln(" [ms]", 3);
+      dsPrint(int_data, DEBUGLevel_Mqtt_PressureSensor);
+      dsPrintln(" [ms]", DEBUGLevel_Mqtt_PressureSensor);
       pressure_sensor.read_period = int_data;
       pressure_sensor.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_PressureSensor_readPeriod "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
       // pressure
   // conversionCoefficient
-  else if (String(topic) == "PumpController/pressure_sensor/conversionCoefficient/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/pressure_sensor/conversionCoefficient/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_PressureSensor_conversionCoefficient "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_PressureSensor_conversionCoefficient "/mqtt_input: ", DEBUGLevel_Mqtt_PressureSensor);
     float_data = atof(char_messageTemp);
     if(float_data>0){
-      dsPrint(float_data, 3);
-      dsPrintln(" [Bar/1]", 3);
+      dsPrint(float_data, DEBUGLevel_Mqtt_PressureSensor);
+      dsPrintln(" [Bar/1]", DEBUGLevel_Mqtt_PressureSensor);
       pressure_sensor.conversionCoefficient = float_data;
       pressure_sensor.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_PressureSensor_conversionCoefficient "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
 // livello_cisterna
   // read_period
-  else if (String(topic) == "Cisterna/livello_cisterna/read_period/mqtt_input") {
-    dsPrint("MQTT input received on Cisterna/livello_cisterna/read_period/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_WaterLevel_readPeriod "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_WaterLevel_readPeriod "/mqtt_input: ", DEBUGLevel_Mqtt_WaterLevel);
     int_data = messageTemp.toInt();
     if(int_data>MIN_SENSOR_READ_PERIOD){
-      dsPrint(int_data, 3);
-      dsPrintln(" [ms]", 3);
+      dsPrint(int_data, DEBUGLevel_Mqtt_WaterLevel);
+      dsPrintln(" [ms]", DEBUGLevel_Mqtt_WaterLevel);
       livello_cisterna.read_period = int_data;
       livello_cisterna.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_WaterLevel_readPeriod "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
   // read_repetitions
-  else if (String(topic) == "Cisterna/livello_cisterna/read_repetitions/mqtt_input") {
-    dsPrint("MQTT input received on Cisterna/livello_cisterna/read_repetitions/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_WaterLevel_readRepetitions "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_WaterLevel_readRepetitions "/mqtt_input: ", DEBUGLevel_Mqtt_WaterLevel);
     int_data = messageTemp.toInt();
     if(int_data>0){
-      dsPrint(int_data, 3);
-      dsPrintln(" measurments.", 3);
+      dsPrint(int_data, DEBUGLevel_Mqtt_WaterLevel);
+      dsPrintln(" measurments.", DEBUGLevel_Mqtt_WaterLevel);
       livello_cisterna.read_repetitions = int_data;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_WaterLevel_readRepetitions "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
   // distance
 // flood_detector
   // read_period
-  else if (String(topic) == "PumpController/flood_detector/read_period/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/flood_detector/read_period/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_FloodSensor_readPeriod "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_FloodSensor_readPeriod "/mqtt_input: ", DEBUGLevel_Mqtt_FloodSensor);
     int_data = messageTemp.toInt();
     if(int_data>MIN_SENSOR_READ_PERIOD){
-      dsPrint(int_data, 3);
-      dsPrintln(" [ms]", 3);
+      dsPrint(int_data, DEBUGLevel_Mqtt_FloodSensor);
+      dsPrintln(" [ms]", DEBUGLevel_Mqtt_FloodSensor);
       flood_detector.read_period = int_data;
       flood_detector.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_FloodSensor_readPeriod "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
       // analog read
   // treshold
-  else if (String(topic) == "PumpController/flood_detector/treshold/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/flood_detector/treshold/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_FloodSensor_threshold "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_FloodSensor_threshold "/mqtt_input: ", DEBUGLevel_Mqtt_FloodSensor);
     int_data = messageTemp.toInt();
     if(int_data>MIN_SENSOR_READ_PERIOD){
-      dsPrint(int_data, 3);
+      dsPrint(int_data, DEBUGLevel_Mqtt_FloodSensor);
       flood_detector.treshold = int_data;
       flood_detector.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 2);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_FloodSensor_threshold "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
     // pump_state_machine
       // current_state;
       // new_state;
       // pump_on;
-  else if (String(topic) == "PumpController/pump_state_machine/pump_on/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/pump_state_machine/pump_on/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_StateMachine_pumpOn "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_StateMachine_pumpOn "/mqtt_input: ", DEBUGLevel_Mqtt_StateMachine);
     int_data = messageTemp.toInt();
     if(int_data==0 || int_data==1){
-      dsPrint(int_data, 3);
-      dsPrintln(" [ms]", 3);
+      dsPrint(int_data, DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(" [ms]", DEBUGLevel_Mqtt_StateMachine);
       pump_state_machine.pump_on = int_data;
       pump_state_machine.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_StateMachine_pumpOn "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
       // safety_block;
-  else if (String(topic) == "PumpController/pump_state_machine/safety_block/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/pump_state_machine/safety_block/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_StateMachine_safetyBlock "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_StateMachine_safetyBlock "/mqtt_input: ", DEBUGLevel_Mqtt_StateMachine);
     int_data = messageTemp.toInt();
     if(int_data==0 || int_data==1){
-      dsPrint(int_data, 3);
-      dsPrintln(" [ms]", 3);
+      dsPrint(int_data, DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(" [ms]", DEBUGLevel_Mqtt_StateMachine);
       pump_state_machine.safety_block = int_data;
       pump_state_machine.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_StateMachine_safetyBlock "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
       // start_time;
       // max_run_time; //[ms]
-  else if (String(topic) == "PumpController/pump_state_machine/max_run_time/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/pump_state_machine/max_run_time/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_StateMachine_maxRunTime "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_StateMachine_maxRunTime "/mqtt_input: ", DEBUGLevel_Mqtt_StateMachine);
     int_data = messageTemp.toInt();
     if(int_data>MIN_SENSOR_READ_PERIOD){
-      dsPrint(int_data, 3);
-      dsPrintln(" [ms]", 3);
+      dsPrint(int_data, DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(" [ms]", DEBUGLevel_Mqtt_StateMachine);
       pump_state_machine.max_run_time = int_data;
       pump_state_machine.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_StateMachine_maxRunTime "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
       // switch_on_pressure; //[Bar]
-  else if (String(topic) == "PumpController/pump_state_machine/switch_on_pressure/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/pump_state_machine/switch_on_pressure/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_StateMachine_switchOnPressure "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_StateMachine_switchOnPressure "/mqtt_input: ", 3);
     float_data = atof(char_messageTemp);
     if(float_data>0 && float_data<pump_state_machine.switch_off_pressure){
-      dsPrint(float_data, 3);
-      dsPrintln(" [Bar/1]", 3);
+      dsPrint(float_data, DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(" [Bar/1]", DEBUGLevel_Mqtt_StateMachine);
       pump_state_machine.switch_on_pressure = float_data;
       pump_state_machine.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_StateMachine_switchOnPressure "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
       // switch_off_pressure; //[Bar]
-  else if (String(topic) == "PumpController/pump_state_machine/switch_off_pressure/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/pump_state_machine/switch_off_pressure/mqtt_input: ", 3);
+  else if (String(topic) == TOPIC_StateMachine_switchOffPressure "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_StateMachine_switchOffPressure "/mqtt_input: ", DEBUGLevel_Mqtt_StateMachine);
     float_data = atof(char_messageTemp);
     if(float_data>0 && float_data>pump_state_machine.switch_on_pressure){
-      dsPrint(float_data, 3);
-      dsPrintln(" [Bar/1]", 3);
+      dsPrint(float_data, DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(" [Bar/1]", DEBUGLevel_Mqtt_StateMachine);
       pump_state_machine.switch_off_pressure = float_data;
       pump_state_machine.new_data = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 3);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_StateMachine_switchOffPressure "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
   // wtd_mqtt_state
-  else if (String(topic) == "PumpController/mqttState/mqtt_input") {
-    dsPrint("MQTT input received on PumpController/mqttState/mqtt_input: ", 4);
+  else if (String(topic) == TOPIC_mqttState "/mqtt_input") {
+    dsPrint("MQTT input received on " TOPIC_mqttState "/mqtt_input: ", DEBUGLevel_Mqtt_Generic);
     int_data = messageTemp.toInt();
     if(int_data==1){
-      dsPrint(int_data, 4);
+      dsPrint(int_data, DEBUGLevel_Mqtt_Generic);
       mqttState = 1;
     }
     else {
-      dsPrintln("INVALID DATA ERROR", 4);
+      dsPrintln("INVALID DATA ERROR on topic:" TOPIC_mqttState "/mqtt_input", DEBUGLevel_Mqtt_Error);
     }
   }
 }
@@ -547,50 +554,50 @@ void reconnect() {
       // TOPIC SUBSCRIPTIONS
     // flow_meter
       // read_period
-      client.subscribe("PumpController/flow_meter/read_period/mqtt_input");
+      client.subscribe(TOPIC_FlowMeter_readPeriod "/mqtt_input");
       // flow rate
       // flowed volume
-      client.subscribe("PumpController/flow_meter/V/mqtt_input");
+      client.subscribe(TOPIC_FlowMeter_V "/mqtt_input");
       // conversionCoefficient
-      client.subscribe("PumpController/flow_meter/conversionCoefficient/mqtt_input");
+      client.subscribe(TOPIC_FlowMeter_conversionCoefficient "/mqtt_input");
     // pressure_sensor
       // read_period
-      client.subscribe("PumpController/pressure_sensor/read_period/mqtt_input");
+      client.subscribe(TOPIC_PressureSensor_readPeriod "/mqtt_input");
       // pressure
       // conversionCoefficient
-      client.subscribe("PumpController/pressure_sensor/conversionCoefficient/mqtt_input");
+      client.subscribe(TOPIC_PressureSensor_conversionCoefficient "/mqtt_input");
     // water level mesurment
       // read_period
-      client.subscribe("Cisterna/livello_cisterna/read_period/mqtt_input");
+      client.subscribe(TOPIC_WaterLevel_readPeriod"/mqtt_input");
       // read_repetitions
-      client.subscribe("Cisterna/livello_cisterna/read_repetitions/mqtt_input");
+      client.subscribe(TOPIC_WaterLevel_readRepetitions "/mqtt_input");
       // distance
     // flood_detector
       // read_period
-      client.subscribe("PumpController/flood_detector/read_period/mqtt_input");
+      client.subscribe(TOPIC_FloodSensor_readPeriod "/mqtt_input");
       // analog read
       // treshold
-      client.subscribe("PumpController/flood_detector/treshold/mqtt_input");
+      client.subscribe(TOPIC_FloodSensor_threshold "/mqtt_input");
     // pump state machine
       // current_state;
       // new_state;
       // pump_on;
-      client.subscribe("PumpController/pump_state_machine/pump_on/mqtt_input");
+      client.subscribe(TOPIC_StateMachine_pumpOn "/mqtt_input");
       // malfunction_detected;
-      client.subscribe("PumpController/pump_state_machine/safety_block/mqtt_input");
+      client.subscribe(TOPIC_StateMachine_safetyBlock "/mqtt_input");
       // start_time;
       // max_run_time; //[ms]
-      client.subscribe("PumpController/pump_state_machine/max_run_time/mqtt_input");
+      client.subscribe(TOPIC_StateMachine_maxRunTime "/mqtt_input");
       //switch_on_pressure; //[Bar]
-      client.subscribe("PumpController/pump_state_machine/switch_on_pressure/mqtt_input");
+      client.subscribe(TOPIC_StateMachine_switchOnPressure "/mqtt_input");
       // witch_off_pressure; //[Bar]
-      client.subscribe("PumpController/pump_state_machine/switch_off_pressure/mqtt_input");
+      client.subscribe(TOPIC_StateMachine_switchOffPressure "/mqtt_input");
       // mqttState
-      client.subscribe("PumpController/mqttState/mqtt_input");
+      client.subscribe(TOPIC_mqttState "/mqtt_input");
     } else {
-      dsPrint("failed, rc=", 2);
-      dsPrint(client.state(), 2);
-      dsPrintln(" try again in 5 seconds", 2);
+      dsPrint("failed, rc=", DEBUGLevel_Mqtt_Error);
+      dsPrint(client.state(), DEBUGLevel_Mqtt_Error);
+      dsPrintln(" try again in 5 seconds", DEBUGLevel_Mqtt_Error);
       // Wait 5 seconds before retrying
       vTaskDelay(pdMS_TO_TICKS(5000));
     }
@@ -640,119 +647,119 @@ void MqttTask(void * parameter) {
       flow_meter.new_data = 0;
       // read_period
       dtostrf(flow_meter.read_period, 1, 2, dataString);
-      dsPrint("PumpController/flow_meter/read_period: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/flow_meter/read_period", dataString);
+      dsPrint(TOPIC_FlowMeter_readPeriod ": ", DEBUGLevel_Mqtt_FlowMeter);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_FlowMeter);
+      client.publish(TOPIC_FlowMeter_readPeriod, dataString);
       // flow rate
       dtostrf(flow_meter.Q, 1, 2, dataString);
-      dsPrint("PumpController/flow_meter/Q: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/flow_meter/Q", dataString);
+      dsPrint(TOPIC_FlowMeter_Q ": ", DEBUGLevel_Mqtt_FlowMeter);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_FlowMeter);
+      client.publish(TOPIC_FlowMeter_Q, dataString);
       // flowed volume
       dtostrf(flow_meter.V, 1, 2, dataString);
-      dsPrint("PumpController/flow_meter/V: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/flow_meter/V", dataString);
+      dsPrint(TOPIC_FlowMeter_V ": ", DEBUGLevel_Mqtt_FlowMeter);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_FlowMeter);
+      client.publish(TOPIC_FlowMeter_V, dataString);
       // conversionCoefficient
       dtostrf(flow_meter.conversionCoefficient, 1, 2, dataString);
-      dsPrint("PumpController/flow_meter/conversionCoefficient: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/flow_meter/conversionCoefficient", dataString);
+      dsPrint(TOPIC_FlowMeter_conversionCoefficient ": ", DEBUGLevel_Mqtt_FlowMeter);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_FlowMeter);
+      client.publish(TOPIC_FlowMeter_conversionCoefficient, dataString);
     }
     // pressure mesurments
     if(pressure_sensor.new_data){
       pressure_sensor.new_data = 0;
       // read_period
       dtostrf(pressure_sensor.read_period, 1, 2, dataString);
-      dsPrint("PumpController/pressure_sensor/read_period: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/pressure_sensor/read_period", dataString);
+      dsPrint(TOPIC_PressureSensor_readPeriod ": ", DEBUGLevel_Mqtt_PressureSensor);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_PressureSensor);
+      client.publish(TOPIC_PressureSensor_readPeriod, dataString);
       // pressure
       dtostrf(pressure_sensor.pressure, 1, 2, dataString);
-      dsPrint("PumpController/pressure_sensor/pressure: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/pressure_sensor/pressure", dataString);
+      dsPrint(TOPIC_PressureSensor_pressure ": ", DEBUGLevel_Mqtt_PressureSensor);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_PressureSensor);
+      client.publish(TOPIC_PressureSensor_pressure, dataString);
       // conversionCoefficient
       dtostrf(pressure_sensor.conversionCoefficient, 1, 2, dataString);
-      dsPrint("PumpController/pressure_sensor/conversionCoefficient: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/pressure_sensor/conversionCoefficient", dataString);
+      dsPrint(TOPIC_PressureSensor_conversionCoefficient ": ", DEBUGLevel_Mqtt_PressureSensor);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_PressureSensor);
+      client.publish(TOPIC_PressureSensor_conversionCoefficient, dataString);
     }
     // water level mesurment
     if(livello_cisterna.new_data){
       livello_cisterna.new_data=0;
       // read_period
       String(livello_cisterna.read_period).toCharArray(dataString, 8);
-      dsPrint("Cisterna/livello_cisterna/read_period: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("Cisterna/livello_cisterna/read_period", dataString);
+      dsPrint(TOPIC_WaterLevel_readPeriod ": ", DEBUGLevel_Mqtt_WaterLevel);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_WaterLevel);
+      client.publish(TOPIC_WaterLevel_readPeriod, dataString);
       // read_repetitions
       String(livello_cisterna.read_repetitions).toCharArray(dataString, 8);
-      dsPrint("Cisterna/livello_cisterna/read_repetitions: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("Cisterna/livello_cisterna/read_repetitions", dataString);
+      dsPrint(TOPIC_WaterLevel_readRepetitions ": ", DEBUGLevel_Mqtt_WaterLevel);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_WaterLevel);
+      client.publish(TOPIC_WaterLevel_readRepetitions, dataString);
       // distance
       xSemaphoreTake( xMutex, portMAX_DELAY );
       dtostrf(livello_cisterna.distance, 1, 2, dataString);
       xSemaphoreGive(xMutex);
-      dsPrint("Cisterna/livello_cisterna/distance: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("Cisterna/livello_cisterna/distance", dataString);
+      dsPrint(TOPIC_WaterLevel_distance ": ", DEBUGLevel_Mqtt_WaterLevel);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_WaterLevel);
+      client.publish(TOPIC_WaterLevel_distance, dataString);
     }
     // flood detector
     if(flood_detector.new_data){
       flood_detector.new_data = 0;
       // read_period
       dtostrf(flood_detector.read_period, 1, 2, dataString);
-      dsPrint("PumpController/flood_detector/read_period: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/flood_detector/read_period", dataString);
+      dsPrint(TOPIC_FloodSensor_readPeriod ": ", DEBUGLevel_Mqtt_FloodSensor);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_FloodSensor);
+      client.publish(TOPIC_FloodSensor_readPeriod, dataString);
       // analog read
       dtostrf(flood_detector.analog_read, 1, 2, dataString);
-      dsPrint("PumpController/flood_detector/analog_read: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/flood_detector/analog_read", dataString);
+      dsPrint(TOPIC_FloodSensor_analogRead ": ", DEBUGLevel_Mqtt_FloodSensor);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_FloodSensor);
+      client.publish(TOPIC_FloodSensor_analogRead, dataString);
       // treshold
       dtostrf(flood_detector.treshold, 1, 2, dataString);
-      dsPrint("PumpController/flood_detector/treshold: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/flood_detector/treshold", dataString);
+      dsPrint(TOPIC_FloodSensor_threshold ": ", DEBUGLevel_Mqtt_FloodSensor);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_FloodSensor);
+      client.publish(TOPIC_FloodSensor_threshold, dataString);
     }
     // pump_state_machine
     if(pump_state_machine.new_data){
       pump_state_machine.new_data = 0;
       // current_state;
       dtostrf(pump_state_machine.current_state, 1, 2, dataString);
-      dsPrint("PumpController/pump_state_machine/current_state: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/pump_state_machine/current_state", dataString);
+      dsPrint(TOPIC_StateMachine_currentState ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
+      client.publish(TOPIC_StateMachine_currentState, dataString);
       // new_state;
       // pump_on;
       dtostrf(pump_state_machine.pump_on, 1, 2, dataString);
-      dsPrint("PumpController/pump_state_machine/pump_on: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/pump_state_machine/pump_on", dataString);
+      dsPrint(TOPIC_StateMachine_pumpOn ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
+      client.publish(TOPIC_StateMachine_pumpOn, dataString);
       // safety_block;
       dtostrf(pump_state_machine.safety_block, 1, 2, dataString);
-      dsPrint("PumpController/pump_state_machine/safety_block: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/pump_state_machine/safety_block", dataString);
+      dsPrint(TOPIC_StateMachine_safetyBlock ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
+      client.publish(TOPIC_StateMachine_safetyBlock, dataString);
       // start_time;
       // max_run_time; //[ms]
       dtostrf(pump_state_machine.max_run_time, 1, 2, dataString);
-      dsPrint("PumpController/pump_state_machine/max_run_time: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/pump_state_machine/max_run_time", dataString);
+      dsPrint(TOPIC_StateMachine_maxRunTime ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
+      client.publish(TOPIC_StateMachine_maxRunTime, dataString);
       //switch_on_pressure; //[Bar]
       dtostrf(pump_state_machine.switch_on_pressure, 1, 2, dataString);
-      dsPrint("PumpController/pump_state_machine/switch_on_pressure: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/pump_state_machine/switch_on_pressure", dataString);
+      dsPrint(TOPIC_StateMachine_switchOnPressure ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
+      client.publish(TOPIC_StateMachine_switchOnPressure, dataString);
       // switch_off_pressure; //[Bar]
       dtostrf(pump_state_machine.switch_off_pressure, 1, 2, dataString);
-      dsPrint("PumpController/pump_state_machine/switch_off_pressure: ", 2);
-      dsPrintln(dataString, 2);
-      client.publish("PumpController/pump_state_machine/switch_off_pressure", dataString);
+      dsPrint(TOPIC_StateMachine_switchOffPressure ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
+      client.publish(TOPIC_StateMachine_switchOffPressure, dataString);
     }
 
     // STATE MACHINE
@@ -808,7 +815,7 @@ void MqttTask(void * parameter) {
 
     // WATCHDOG RESET
     if (millis()-previous_mqtt_check_time>WDT_MQTT_CONTROLL_PERIOD){
-      client.publish("PumpController/mqttState", "OK");
+      client.publish(TOPIC_mqttState, "OK");
       while (!mqttState){
         if (!client.connected()) {
           reconnect();
@@ -817,13 +824,13 @@ void MqttTask(void * parameter) {
       }
       ret=esp_task_wdt_reset();
       if (ret==ESP_OK){
-        dsPrintln("WDT reset: ESP_OK",2);
+        dsPrintln("WDT reset: ESP_OK",3);
       }
       else if(ret==ESP_ERR_INVALID_ARG){
-        dsPrintln("WDT reset: ESP_ERR_INVALID_ARG", 2);
+        dsPrintln("WDT reset: ESP_ERR_INVALID_ARG", 0);
       }
       else{
-        dsPrintln("WDT reset: ESP_ERR_INVALID_STATE", 2);
+        dsPrintln("WDT reset: ESP_ERR_INVALID_STATE", 0);
       }
       mqttState = 0;
       previous_mqtt_check_time = millis();
@@ -831,13 +838,13 @@ void MqttTask(void * parameter) {
     else{
       ret=esp_task_wdt_reset();
       if (ret==ESP_OK){
-        dsPrintln("WDT reset: ESP_OK",0);
+        dsPrintln("WDT reset: ESP_OK",3);
       }
       else if(ret==ESP_ERR_INVALID_ARG){
-        dsPrintln("WDT reset: ESP_ERR_INVALID_ARG", 2);
+        dsPrintln("WDT reset: ESP_ERR_INVALID_ARG", 0);
       }
       else{
-        dsPrintln("WDT reset: ESP_ERR_INVALID_STATE", 2);
+        dsPrintln("WDT reset: ESP_ERR_INVALID_STATE", 0);
       }
     }
   }
