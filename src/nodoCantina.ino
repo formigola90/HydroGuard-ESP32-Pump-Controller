@@ -23,7 +23,7 @@
 
 // DEFINES
 // debug
-#define DEBUG 1 // 0 (Silent) to 4 (Verbose)
+#define DEBUG 2 // 0 (Silent) to 4 (Verbose)
 #ifdef DEBUG
   #define dsPrint(s, level) if(level<DEBUG)Serial.print(s)
   #define dsPrintln(s, level) if(level<DEBUG)Serial.println(s)
@@ -31,18 +31,18 @@
   #define dsPrint(s, level)
   #define dsPrintln(s, level)
 #endif
-#define DEBUGLevel_Mqtt_Generic 3
+#define DEBUGLevel_Mqtt_Generic 0
 #define DEBUGLevel_Mqtt_Error 0
 #define DEBUGLevel_Mqtt_FlowMeter 3
 #define DEBUGLevel_Mqtt_PressureSensor 3
 #define DEBUGLevel_Mqtt_WaterLevel 3
 #define DEBUGLevel_Mqtt_FloodSensor 3
-#define DEBUGLevel_Mqtt_StateMachine 3
+#define DEBUGLevel_Mqtt_StateMachine 0
 // constants
 #define SOUND_SPEED 0.034
 // wtd
 #define WDT_TIMEOUT 30
-#define WDT_MQTT_CONTROLL_PERIOD 60000
+#define WDT_MQTT_CONTROLL_PERIOD 6000
 // rele
 #define RELAY_SIGNAL_PIN 16
 // pump states
@@ -190,8 +190,8 @@ long measureAJSR04M(uint8_t trigPin, uint8_t echoPin){
     vTaskDelay(pdMS_TO_TICKS(1000)); //wait at least 1/2 sec
     triggerAJSR04M(trigPin);
     duration = pulseIn(echoPin, HIGH);
-    dsPrint("AJSR04M measured echo delay ", 1);
-    dsPrintln(duration, 1);
+    dsPrint("AJSR04M measured echo delay ", DEBUGLevel_Mqtt_WaterLevel);
+    dsPrintln(duration, DEBUGLevel_Mqtt_WaterLevel);
     duration_mean = duration_mean + duration;
     if(duration_mean == old_duration_mean && valid_measurements>1){
       valid_measurements = valid_measurements-1;
@@ -214,22 +214,22 @@ void sensorsReadTask(void * parameter) {
   // MODULES SETUP
   Adafruit_ADS1115 adc;
   if (!adc.begin()) {
-    dsPrintln("Failed to initialize ADS.", 4);
+    dsPrintln("Failed to initialize ADS.", DEBUGLevel_Mqtt_FloodSensor);
     while (1);
   }
   // SENSORS SETUP
   // flow meter
-  dsPrintln("Flow meter setup.", 1);
+  dsPrintln("Flow meter setup.", DEBUGLevel_Mqtt_FlowMeter);
 	pinMode(flow_meter.PIN, INPUT_PULLDOWN);
 	attachInterrupt(flow_meter.PIN, isr, RISING);
   // pressure sensor;
-  dsPrintln("Pressure sensor setup.", 1);
+  dsPrintln("Pressure sensor setup.", DEBUGLevel_Mqtt_FlowMeter);
   // water level sensor
-  dsPrintln("Water level sensor setup.", 1);
+  dsPrintln("Water level sensor setup.", DEBUGLevel_Mqtt_FlowMeter);
   pinMode(livello_cisterna.TRIG_PIN, OUTPUT); // Sets the trigPin as an Output
   pinMode(livello_cisterna.ECHO_PIN, INPUT_PULLDOWN); // Sets the echoPin as an Input
   // flood detector
-  dsPrintln("Flood detector setup.", 1);
+  dsPrintln("Flood detector setup.", DEBUGLevel_Mqtt_FlowMeter);
   pinMode(flood_detector.POWER_PIN, OUTPUT);
   digitalWrite(flood_detector.POWER_PIN, LOW);
 	pinMode(flood_detector.SIGNAL_PIN, INPUT_PULLDOWN);
@@ -239,7 +239,7 @@ void sensorsReadTask(void * parameter) {
     read_time = millis();
     if ((read_time - flow_meter.previous_read_time)>flow_meter.read_period){
       flow_meter.new_data = 1;
-      dsPrintln("Measuring flowrate.", 1);
+      dsPrintln("Measuring flowrate.", DEBUGLevel_Mqtt_FlowMeter);
       flow_meter.Q = flow_meter.pulseNumber * flow_meter.conversionCoefficient; // [L/min]
       flow_meter.pulseNumber = 0; // esetting flowmwter pulse counter
       flow_meter.V = flow_meter.V + flow_meter.Q/60/1000 * (read_time - flow_meter.previous_read_time); // volume calculation
@@ -250,13 +250,13 @@ void sensorsReadTask(void * parameter) {
     if ((read_time - pressure_sensor.previous_read_time)>pressure_sensor.read_period){
       pressure_sensor.new_data = 1;
       pressure_sensor.previous_read_time = read_time;
-      dsPrintln("Measuring pressure.", 1);
+      dsPrintln("Measuring pressure.", DEBUGLevel_Mqtt_PressureSensor);
       pressure_sensor.analogRead = adc.computeVolts(adc.readADC_SingleEnded(pressure_sensor.ADC_CHANNEL));
-      dsPrint("Analog read: ", 1);
-      dsPrintln(pressure_sensor.analogRead, 1);
+      dsPrint("Analog read: ", DEBUGLevel_Mqtt_PressureSensor);
+      dsPrintln(pressure_sensor.analogRead, DEBUGLevel_Mqtt_PressureSensor);
       pressure_sensor.pressure = pressure_sensor.analogRead * pressure_sensor.conversionCoefficient;
-      dsPrint("Pressure: ", 1);
-      dsPrintln(pressure_sensor.pressure, 1);
+      dsPrint("Pressure: ", DEBUGLevel_Mqtt_PressureSensor);
+      dsPrintln(pressure_sensor.pressure, DEBUGLevel_Mqtt_PressureSensor);
     }
 
     // Debug Serial
@@ -272,14 +272,14 @@ void sensorsReadTask(void * parameter) {
     if ((read_time - livello_cisterna.previous_read_time)>livello_cisterna.read_period){
       livello_cisterna.new_data = 1;
       livello_cisterna.previous_read_time = read_time;
-      dsPrintln("Measuring water level.", 1);
+      dsPrintln("Measuring water level.", DEBUGLevel_Mqtt_WaterLevel);
       xSemaphoreTake( xMutex, portMAX_DELAY );
       livello_cisterna.duration = measureAJSR04M( livello_cisterna.TRIG_PIN, livello_cisterna.ECHO_PIN);
-      dsPrint("Duration:", 1);
-      dsPrintln(livello_cisterna.duration, 1);
+      dsPrint("Duration:", DEBUGLevel_Mqtt_WaterLevel);
+      dsPrintln(livello_cisterna.duration, DEBUGLevel_Mqtt_WaterLevel);
       livello_cisterna.distance = livello_cisterna.duration*livello_cisterna.sound_speed/2;
-      dsPrint("Distance:", 1);
-      dsPrintln(livello_cisterna.distance, 1);
+      dsPrint("Distance:", DEBUGLevel_Mqtt_WaterLevel);
+      dsPrintln(livello_cisterna.distance, DEBUGLevel_Mqtt_WaterLevel);
       xSemaphoreGive(xMutex);
     }
 
@@ -288,15 +288,15 @@ void sensorsReadTask(void * parameter) {
     if ((read_time - flood_detector.previous_read_time)>flood_detector.read_period){
       flood_detector.new_data = 1;
       flood_detector.previous_read_time = read_time;
-      dsPrintln("Flood checking.", 1);
+      dsPrintln("Flood checking.", DEBUGLevel_Mqtt_FloodSensor);
       digitalWrite(flood_detector.POWER_PIN, HIGH);
       vTaskDelay(pdMS_TO_TICKS(10));
       flood_detector.analog_read = analogRead(flood_detector.SIGNAL_PIN);
-      dsPrint("Flood detector analog read: ", 1);
-      dsPrintln(flood_detector.analog_read, 1);
+      dsPrint("Flood detector analog read: ", DEBUGLevel_Mqtt_FloodSensor);
+      dsPrintln(flood_detector.analog_read, DEBUGLevel_Mqtt_FloodSensor);
       digitalWrite(flood_detector.POWER_PIN, LOW);
       if(flood_detector.analog_read>flood_detector.treshold){
-        dsPrintln("Flood detected!", 3);
+        dsPrintln("Flood detected!", DEBUGLevel_Mqtt_FloodSensor);
         pump_state_machine.safety_block = 1;
       }
     }
@@ -547,10 +547,10 @@ void callback(char* topic, byte* message, unsigned int length) {
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
-    dsPrint("Attempting MQTT connection...", 2);
+    dsPrint("Attempting MQTT connection...", DEBUGLevel_Mqtt_Generic);
     // Attempt to connect
     if (client.connect(MQTT_ID, MQTT_USER, MQTT_PASSWORD)) {
-      dsPrint("connected", 2);
+      dsPrint("connected", DEBUGLevel_Mqtt_Generic);
       // TOPIC SUBSCRIPTIONS
     // flow_meter
       // read_period
@@ -609,23 +609,23 @@ void MqttTask(void * parameter) {
   int ret = 0;
   char dataString[8];
 
-  dsPrintln("Configuring WDT...", 2);
+  dsPrintln("Configuring WDT...", DEBUGLevel_Mqtt_Error);
   esp_task_wdt_init(3000, true); // Timeout of 3000ms and enable panic
   esp_task_wdt_add(NULL); //add current thread to WDT watch
 
   // NETWORK SETUP
-  dsPrint("Connecting to SSID: ", 2);
-  dsPrintln(ssid, 2);
+  dsPrint("Connecting to SSID: ", DEBUGLevel_Mqtt_Generic);
+  dsPrintln(ssid, DEBUGLevel_Mqtt_Generic);
   
   WiFi.begin(ssid, wifipassword);
   while( WiFi.status() != WL_CONNECTED ) {
-    dsPrint(".", 2);
+    dsPrint(".", DEBUGLevel_Mqtt_Generic);
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
-  dsPrint("\nConnected to ", 2);
-  dsPrintln(ssid, 2);
-  dsPrintln("IP address: ", 2);
-  dsPrintln(WiFi.localIP(), 2);
+  dsPrint("\nConnected to ", DEBUGLevel_Mqtt_Generic);
+  dsPrintln(ssid, DEBUGLevel_Mqtt_Generic);
+  dsPrintln("IP address: ", DEBUGLevel_Mqtt_Generic);
+  dsPrintln(WiFi.localIP(), DEBUGLevel_Mqtt_Generic);
 
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
@@ -814,7 +814,36 @@ void MqttTask(void * parameter) {
     
 
     // WATCHDOG RESET
+    dsPrintln((millis()-previous_mqtt_check_time), 0);
     if (millis()-previous_mqtt_check_time>WDT_MQTT_CONTROLL_PERIOD){
+      dsPrintln("Starting Periodic Connection Check", DEBUGLevel_Mqtt_StateMachine);
+      
+      // current_state;
+      dtostrf(pump_state_machine.current_state, 1, 2, dataString);
+      dsPrint(TOPIC_StateMachine_currentState ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
+      // new_state;
+      // pump_on;
+      dtostrf(pump_state_machine.pump_on, 1, 2, dataString);
+      dsPrint(TOPIC_StateMachine_pumpOn ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
+      // safety_block;
+      dtostrf(pump_state_machine.safety_block, 1, 2, dataString);
+      dsPrint(TOPIC_StateMachine_safetyBlock ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
+      // start_time;
+      // max_run_time; //[ms]
+      dtostrf(pump_state_machine.max_run_time, 1, 2, dataString);
+      dsPrint(TOPIC_StateMachine_maxRunTime ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
+      //switch_on_pressure; //[Bar]
+      dtostrf(pump_state_machine.switch_on_pressure, 1, 2, dataString);
+      dsPrint(TOPIC_StateMachine_switchOnPressure ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
+      // switch_off_pressure; //[Bar]
+      dtostrf(pump_state_machine.switch_off_pressure, 1, 2, dataString);
+      dsPrint(TOPIC_StateMachine_switchOffPressure ": ", DEBUGLevel_Mqtt_StateMachine);
+      dsPrintln(dataString, DEBUGLevel_Mqtt_StateMachine);
       client.publish(TOPIC_mqttState, "OK");
       while (!mqttState){
         if (!client.connected()) {
@@ -824,13 +853,13 @@ void MqttTask(void * parameter) {
       }
       ret=esp_task_wdt_reset();
       if (ret==ESP_OK){
-        dsPrintln("WDT reset: ESP_OK",3);
+        dsPrintln("WDT reset: ESP_OK", 3);
       }
       else if(ret==ESP_ERR_INVALID_ARG){
-        dsPrintln("WDT reset: ESP_ERR_INVALID_ARG", 0);
+        dsPrintln("WDT reset: ESP_ERR_INVALID_ARG", DEBUGLevel_Mqtt_Error);
       }
       else{
-        dsPrintln("WDT reset: ESP_ERR_INVALID_STATE", 0);
+        dsPrintln("WDT reset: ESP_ERR_INVALID_STATE", DEBUGLevel_Mqtt_Error);
       }
       mqttState = 0;
       previous_mqtt_check_time = millis();
@@ -838,13 +867,13 @@ void MqttTask(void * parameter) {
     else{
       ret=esp_task_wdt_reset();
       if (ret==ESP_OK){
-        dsPrintln("WDT reset: ESP_OK",3);
+        dsPrintln("WDT reset: ESP_OK", 3);
       }
       else if(ret==ESP_ERR_INVALID_ARG){
-        dsPrintln("WDT reset: ESP_ERR_INVALID_ARG", 0);
+        dsPrintln("WDT reset: ESP_ERR_INVALID_ARG", DEBUGLevel_Mqtt_Error);
       }
       else{
-        dsPrintln("WDT reset: ESP_ERR_INVALID_STATE", 0);
+        dsPrintln("WDT reset: ESP_ERR_INVALID_STATE", DEBUGLevel_Mqtt_Error);
       }
     }
   }
