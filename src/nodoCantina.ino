@@ -36,7 +36,7 @@
 #define DEBUGLevel_Mqtt_Error 0
 #define DEBUGLevel_Mqtt_FlowMeter 3
 #define DEBUGLevel_Mqtt_PressureSensor 3
-#define DEBUGLevel_Mqtt_WaterLevel 3
+#define DEBUGLevel_Mqtt_WaterLevel 0
 #define DEBUGLevel_Mqtt_FloodSensor 3
 #define DEBUGLevel_Mqtt_StateMachine 0
 // constants
@@ -169,25 +169,25 @@ WATER_SENSOR flood_detector = {5000, 0, 0, FLOOD_DETECTOR_POWER_PIN, FLOOD_DETEC
 // this function is used to load variables stored in the persistent memory to allow normal functioning
 // after reboot
 void loadFromPersistentMemory(){
-  PersistentMemory.begin("HydroguardMemory", true); // true -> read only 
+  PersistentMemory.begin("MEMORY", true); // true -> read only 
   // pump state machine
   if(PersistentMemory.isKey("pump_on")) pump_state_machine.pump_on = PersistentMemory.getBool("pump_on");
   if(PersistentMemory.isKey("safety_block")) pump_state_machine.safety_block = PersistentMemory.getBool("safety_block");
   if(PersistentMemory.isKey("max_run_time")) pump_state_machine.max_run_time = PersistentMemory.getLong("max_run_time");
-  if(PersistentMemory.isKey("switch_on_pressure")) pump_state_machine.switch_on_pressure = PersistentMemory.getFloat("switch_on_pressure");
-  if(PersistentMemory.isKey("switch_off_pressure")) pump_state_machine.switch_off_pressure = PersistentMemory.getFloat("switch_off_pressure");
+  if(PersistentMemory.isKey("on_pressure")) pump_state_machine.switch_on_pressure = PersistentMemory.getFloat("on_pressure");
+  if(PersistentMemory.isKey("off_pressure")) pump_state_machine.switch_off_pressure = PersistentMemory.getFloat("off_pressure");
   // flow meter
-  if(PersistentMemory.isKey("YFG1_read_period")) flow_meter.read_period = PersistentMemory.getInt("YFG1_read_period");
-  if(PersistentMemory.isKey("YFG1_conversionCoefficient")) flow_meter.conversionCoefficient = PersistentMemory.getFloat("YFG1_conversionCoefficient");
+  if(PersistentMemory.isKey("YFG1_rp")) flow_meter.read_period = PersistentMemory.getInt("YFG1_rp");
+  if(PersistentMemory.isKey("YFG1_k")) flow_meter.conversionCoefficient = PersistentMemory.getFloat("YFG1_k");
   // pressure sensor
-  if(PersistentMemory.isKey("YD6080_read_period")) pressure_sensor.read_period = PersistentMemory.getInt("YD6080_read_period");
-  if(PersistentMemory.isKey("YD6080_conversionCoefficient")) pressure_sensor.conversionCoefficient = PersistentMemory.getFloat("YD6080_conversionCoefficient");
+  if(PersistentMemory.isKey("YD6080_rd")) pressure_sensor.read_period = PersistentMemory.getInt("YD6080_rd");
+  if(PersistentMemory.isKey("YD6080_k")) pressure_sensor.conversionCoefficient = PersistentMemory.getFloat("YD6080_k");
   // distance sensor
-  if(PersistentMemory.isKey("AJSR04M_read_period")) livello_cisterna.read_period = PersistentMemory.getInt("AJSR04M_read_period");
-  if(PersistentMemory.isKey("AJSR04M_read_repetitions")) livello_cisterna.read_repetitions =  PersistentMemory.getInt("AJSR04M_read_repetitions");
+  if(PersistentMemory.isKey("AJSR04M_rp")) livello_cisterna.read_period = PersistentMemory.getInt("AJSR04M_rp");
+  if(PersistentMemory.isKey("AJSR04M_rr")) livello_cisterna.read_repetitions =  PersistentMemory.getInt("AJSR04M_rr");
   // flood detector
-  if(PersistentMemory.isKey("WATER_SENSOR_read_period")) flood_detector.read_period = PersistentMemory.getInt("WATER_SENSOR_read_period");
-  if(PersistentMemory.isKey("WATER_SENSOR_treshold")) flood_detector.treshold = PersistentMemory.getInt("WATER_SENSOR_treshold");
+  if(PersistentMemory.isKey("flood_rp")) flood_detector.read_period = PersistentMemory.getInt("flood_rp");
+  if(PersistentMemory.isKey("flood_t")) flood_detector.treshold = PersistentMemory.getInt("flood_t");
 
   PersistentMemory.end();
 }
@@ -199,34 +199,53 @@ void IRAM_ATTR isr() {
 }
 // AJSR04M ultrasound trigger
 void triggerAJSR04M(uint8_t trigPin){
-  // Clears the trigPin
   digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  // Sets the trigPin on HIGH state for 10 micro seconds
+  delayMicroseconds(5); // Increased from 2 to 5 for hardware stabilization
+  
   digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
+  delayMicroseconds(12); // Increased to 12us to guarantee the module registers the trigger
+  
   digitalWrite(trigPin, LOW);  
 }
 // AJSR04M ultrasound distance mesurment function
 long measureAJSR04M(uint8_t trigPin, uint8_t echoPin){
-  long duration_mean = 0;
-  long duration = 0;
-  long old_duration_mean = 0;
-  int valid_measurements = livello_cisterna.read_repetitions;
-  for(int i=0; i<(livello_cisterna.read_repetitions); i++){
-    vTaskDelay(pdMS_TO_TICKS(1000)); //wait at least 1/2 sec
-    triggerAJSR04M(trigPin);
-    duration = pulseIn(echoPin, HIGH);
-    dsPrint("AJSR04M measured echo delay ", DEBUGLevel_Mqtt_WaterLevel);
-    dsPrintln(duration, DEBUGLevel_Mqtt_WaterLevel);
-    duration_mean = duration_mean + duration;
-    if(duration_mean == old_duration_mean && valid_measurements>1){
-      valid_measurements = valid_measurements-1;
-    }
-    old_duration_mean = duration_mean;
+  static long duration_sum = 0;
+  static int valid_measurements = 0;
+  int target_samples = livello_cisterna.read_repetitions;
+  long mean_duration = -1;
+  
+  // mesurement procedure
+  triggerAJSR04M(trigPin);
+  
+  // Timeout at 13000us (~2.2 meters max range)
+  long duration = pulseIn(echoPin, HIGH, 13000); 
+  
+  dsPrint("AJSR04M Raw Echo: ", DEBUGLevel_Mqtt_WaterLevel);
+  dsPrintln(duration, DEBUGLevel_Mqtt_WaterLevel);
+  
+  // VALIDATION FILTER (10 cm to 200 cm window):
+  // 580 us  = ~10 cm distance
+  // 11600 us = ~200 cm distance
+  if(duration >= 580 && duration <= 11600){
+    duration_sum += duration;
+    valid_measurements++;
+    
+    dsPrint("Valid reading collected! Count: ", DEBUGLevel_Mqtt_WaterLevel);
+    dsPrintln(valid_measurements, DEBUGLevel_Mqtt_WaterLevel);
+  } else {
+    dsPrintln("Invalid reading or 0 detected. Retrying immediately...", DEBUGLevel_Mqtt_WaterLevel);
   }
-  duration_mean = duration_mean / valid_measurements; //mean of all valid measurments
-  return duration_mean;
+
+  if (valid_measurements==target_samples){
+    // can calculate the mean duration
+    mean_duration = duration_sum / valid_measurements;
+    // reset of the counter and of the duration sum
+    valid_measurements = 0;
+    duration_sum = 0;
+  }
+  
+  // if there is a valid duration mean it will be returned otherwise the function returns -1
+  return mean_duration;
 }
 
 // TASK DEFINES
@@ -297,16 +316,21 @@ void sensorsReadTask(void * parameter) {
     // water level mesurment
     read_time = millis();
     if ((read_time - livello_cisterna.previous_read_time)>livello_cisterna.read_period){
-      livello_cisterna.new_data = 1;
       livello_cisterna.previous_read_time = read_time;
       dsPrintln("Measuring water level.", DEBUGLevel_Mqtt_WaterLevel);
       xSemaphoreTake( xMutex, portMAX_DELAY );
       livello_cisterna.duration = measureAJSR04M( livello_cisterna.TRIG_PIN, livello_cisterna.ECHO_PIN);
       dsPrint("Duration:", DEBUGLevel_Mqtt_WaterLevel);
       dsPrintln(livello_cisterna.duration, DEBUGLevel_Mqtt_WaterLevel);
-      livello_cisterna.distance = livello_cisterna.duration*livello_cisterna.sound_speed/2;
-      dsPrint("Distance:", DEBUGLevel_Mqtt_WaterLevel);
-      dsPrintln(livello_cisterna.distance, DEBUGLevel_Mqtt_WaterLevel);
+      // publish data only when a valid duration is mesured
+      if (livello_cisterna.duration>0){
+        livello_cisterna.new_data = 1;
+        livello_cisterna.distance = livello_cisterna.duration*livello_cisterna.sound_speed/2;
+        dsPrint("Valid! Distance:", DEBUGLevel_Mqtt_WaterLevel);
+        dsPrintln(livello_cisterna.distance, DEBUGLevel_Mqtt_WaterLevel);
+      }else{
+        dsPrintln("The mesured duration was't valid. Skipping!", DEBUGLevel_Mqtt_WaterLevel);
+      }
       xSemaphoreGive(xMutex);
     }
 
@@ -326,7 +350,7 @@ void sensorsReadTask(void * parameter) {
         dsPrintln("Flood detected!", DEBUGLevel_Mqtt_FloodSensor);
         pump_state_machine.safety_block = 1;
         // save in the Hydroguard Memory
-        PersistentMemory.begin("HydroguardMemory", false); // false -> read/write
+        PersistentMemory.begin("MEMORY", false); // false -> read/write
         PersistentMemory.putBool("safety_block", pump_state_machine.safety_block);
         PersistentMemory.end();
       }
@@ -353,7 +377,7 @@ void callback(char* topic, byte* message, unsigned int length) {
   dsPrintln("", DEBUGLevel_Mqtt_Generic);
 
   // Persistent memory open
-  PersistentMemory.begin("HydroguardMemory", false); // false -> read/write
+  PersistentMemory.begin("MEMORY", false); // false -> read/write
 
 
   // MQTT MESSAGE DECODING
@@ -368,7 +392,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       flow_meter.read_period = int_data;
       flow_meter.new_data = 1;
       // save in HydroGuard Memory
-      PersistentMemory.putInt("YFG1_read_period", int_data);
+      PersistentMemory.putInt("YFG1_rp", int_data);
     }
     else {
       dsPrint(int_data, DEBUGLevel_Mqtt_Error);
@@ -399,7 +423,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       dsPrintln(" [Bar/1]", DEBUGLevel_Mqtt_FlowMeter);
       flow_meter.conversionCoefficient = float_data;
       flow_meter.new_data = 1;
-      PersistentMemory.putFloat("YFG1_conversionCoefficient", float_data);
+      PersistentMemory.putFloat("YFG1_k", float_data);
     }
     else {
       dsPrintln("INVALID DATA ERROR on topic:" TOPIC_FlowMeter_conversionCoefficient "/mqtt_input", DEBUGLevel_Mqtt_Error);
@@ -415,7 +439,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       dsPrintln(" [ms]", DEBUGLevel_Mqtt_PressureSensor);
       pressure_sensor.read_period = int_data;
       pressure_sensor.new_data = 1;
-      PersistentMemory.putInt("YD6080_read_period", int_data);
+      PersistentMemory.putInt("YD6080_rd", int_data);
     }
     else {
       dsPrintln("INVALID DATA ERROR on topic:" TOPIC_PressureSensor_readPeriod "/mqtt_input", DEBUGLevel_Mqtt_Error);
@@ -431,7 +455,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       dsPrintln(" [Bar/1]", DEBUGLevel_Mqtt_PressureSensor);
       pressure_sensor.conversionCoefficient = float_data;
       pressure_sensor.new_data = 1;
-      PersistentMemory.putFloat("YD6080_conversionCoefficient", float_data);
+      PersistentMemory.putFloat("YD6080_k", float_data);
     }
     else {
       dsPrintln("INVALID DATA ERROR on topic:" TOPIC_PressureSensor_conversionCoefficient "/mqtt_input", DEBUGLevel_Mqtt_Error);
@@ -447,7 +471,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       dsPrintln(" [ms]", DEBUGLevel_Mqtt_WaterLevel);
       livello_cisterna.read_period = int_data;
       livello_cisterna.new_data = 1;
-      PersistentMemory.putInt("AJSR04M_read_period", int_data);
+      PersistentMemory.putInt("AJSR04M_rp", int_data);
     }
     else {
       dsPrintln("INVALID DATA ERROR on topic:" TOPIC_WaterLevel_readPeriod "/mqtt_input", DEBUGLevel_Mqtt_Error);
@@ -461,7 +485,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       dsPrint(int_data, DEBUGLevel_Mqtt_WaterLevel);
       dsPrintln(" measurments.", DEBUGLevel_Mqtt_WaterLevel);
       livello_cisterna.read_repetitions = int_data;
-      PersistentMemory.putInt("AJSR04M_read_repetitions", int_data);
+      PersistentMemory.putInt("AJSR04M_rr", int_data);
     }
     else {
       dsPrintln("INVALID DATA ERROR on topic:" TOPIC_WaterLevel_readRepetitions "/mqtt_input", DEBUGLevel_Mqtt_Error);
@@ -478,7 +502,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       dsPrintln(" [ms]", DEBUGLevel_Mqtt_FloodSensor);
       flood_detector.read_period = int_data;
       flood_detector.new_data = 1;
-      PersistentMemory.putInt("WATER_SENSOR_read_period", int_data);
+      PersistentMemory.putInt("flood_rp", int_data);
     }
     else {
       dsPrintln("INVALID DATA ERROR on topic:" TOPIC_FloodSensor_readPeriod "/mqtt_input", DEBUGLevel_Mqtt_Error);
@@ -493,7 +517,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       dsPrint(int_data, DEBUGLevel_Mqtt_FloodSensor);
       flood_detector.treshold = int_data;
       flood_detector.new_data = 1;
-      PersistentMemory.putInt("WATER_SENSOR_treshold", int_data);
+      PersistentMemory.putInt("flood_t", int_data);
     }
     else {
       dsPrintln("INVALID DATA ERROR on topic:" TOPIC_FloodSensor_threshold "/mqtt_input", DEBUGLevel_Mqtt_Error);
@@ -557,7 +581,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       dsPrintln(" [Bar/1]", DEBUGLevel_Mqtt_StateMachine);
       pump_state_machine.switch_on_pressure = float_data;
       pump_state_machine.new_data = 1;
-      PersistentMemory.putFloat("switch_on_pressure", float_data);
+      PersistentMemory.putFloat("on_pressure", float_data);
     }
     else {
       dsPrintln("INVALID DATA ERROR on topic:" TOPIC_StateMachine_switchOnPressure "/mqtt_input", DEBUGLevel_Mqtt_Error);
@@ -572,7 +596,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       dsPrintln(" [Bar/1]", DEBUGLevel_Mqtt_StateMachine);
       pump_state_machine.switch_off_pressure = float_data;
       pump_state_machine.new_data = 1;
-      PersistentMemory.putFloat("switch_off_pressure", float_data);
+      PersistentMemory.putFloat("off_pressure", float_data);
     }
     else {
       dsPrintln("INVALID DATA ERROR on topic:" TOPIC_StateMachine_switchOffPressure "/mqtt_input", DEBUGLevel_Mqtt_Error);
@@ -865,7 +889,6 @@ void MqttTask(void * parameter) {
     
 
     // WATCHDOG RESET
-    dsPrintln((millis()-previous_mqtt_check_time), 0);
     if (millis()-previous_mqtt_check_time>WDT_MQTT_CONTROLL_PERIOD){
       dsPrintln("Starting Periodic Connection Check", DEBUGLevel_Mqtt_StateMachine);
       
